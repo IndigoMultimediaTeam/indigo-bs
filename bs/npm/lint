@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+# depends on
+declare -r lockfile_lint=node_modules/.bin/lockfile-lint
+
+$lockfile_lint --path package.json

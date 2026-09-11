@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+# depends on
+declare -r npm_check_updates=node_modules/.bin/npm-check-updates
+
+$npm_check_updates --interactive --format group --cooldown 7

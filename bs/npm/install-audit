@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+# depends on
+declare -r npq=node_modules/.bin/npq
+
+$npq install "$1" --dry-run

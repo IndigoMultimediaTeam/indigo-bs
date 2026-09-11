@@ -1,0 +1,32 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = tab
+trim_trailing_whitespace = true
+max_line_length = 120
+
+[*.json]
+max_line_length = unset
+
+[*.yml]
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[android/**]
+indent_style = space
+trim_trailing_whitespace = false
+max_line_length = unset
+
+# generated files
+[src/routeTree.gen.ts]
+max_line_length = unset
+indent_style = space
+indent_size = 2
+
+[gradlew.bat]
+end_of_line = unset

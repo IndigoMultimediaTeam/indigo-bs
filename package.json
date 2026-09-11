@@ -1,0 +1,47 @@
+{
+	"name": "@indigomultimediateam/indigo-bs",
+	"version": "1.0.0-alpha",
+	"description": "Indigo’s shared bs (build system) utils and configs",
+	"homepage": "https://github.com/IndigoMultimediaTeam/indigo-bs#readme",
+	"bugs": {
+		"url": "https://github.com/IndigoMultimediaTeam/indigo-bs/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/IndigoMultimediaTeam/indigo-bs.git"
+	},
+	"license": "ISC",
+	"author": "Jan Andrle <jan.andrle@indigo.cz>",
+	"type": "module",
+	"bin": "bs/ws.js",
+	"exports": {
+		"./biome": "./biome.json",
+		"./tsconfig": "./tsconfig.json",
+		"./tsconfig.react": "./tsconfig.react.json"
+	},
+	"files": [
+		"bs",
+		"biome.json",
+		"tsconfig.json",
+		"tsconfig.react.json"
+	],
+	"scripts": {
+		"prepare": "bs/npm/hooks/prepare",
+		"preversion": "bs/build"
+	},
+	"dependencies": {
+		"@biomejs/biome": "~2.5",
+		"fallow": "~3.22",
+		"lockfile-lint": "~5.0",
+		"npq": "~2.0",
+		"npm-check-updates": "~16.14"
+	},
+	"peerDependencies": {
+		"nodejsscript": "~1",
+		"typescript": "~7.0"
+	},
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://npm.pkg.github.com"
+	}
+}
