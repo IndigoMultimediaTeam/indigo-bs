@@ -13,28 +13,25 @@
 	"license": "ISC",
 	"author": "Jan Andrle <jan.andrle@indigo.cz>",
 	"type": "module",
-	"bin": "bs/ws.js",
 	"exports": {
-		"./biome": "./biome.json",
-		"./tsconfig": "./tsconfig.json",
-		"./tsconfig.react": "./tsconfig.react.json"
+		"./biome.json": "./biome.json",
+		"./tsconfig.json": "./tsconfig.json",
+		"./tsconfig.react.json": "./tsconfig.react.json"
 	},
 	"files": [
 		"bs",
+		"install.sh",
 		"biome.json",
 		"tsconfig.json",
 		"tsconfig.react.json"
 	],
-	"scripts": {
-		"prepare": "bs/npm/hooks/prepare",
-		"preversion": "bs/build"
-	},
+	"scripts": {},
 	"dependencies": {
-		"@biomejs/biome": "~2.5",
+		"@biomejs/biome": "^2.5.12",
 		"fallow": "~3.22",
 		"lockfile-lint": "~5.0",
-		"npq": "~2.0",
-		"npm-check-updates": "~16.14"
+		"npm-check-updates": "~23.1",
+		"npq": "~3.27"
 	},
 	"peerDependencies": {
 		"nodejsscript": "~1",
@@ -43,5 +40,8 @@
 	"publishConfig": {
 		"access": "public",
 		"registry": "https://npm.pkg.github.com"
+	},
+	"allowScripts": {
+		"npq@2.0.23": true
 	}
 }
