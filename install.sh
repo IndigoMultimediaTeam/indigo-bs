@@ -15,6 +15,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || {
 	exit 1
 }
 
+# ---------------------------------------------------------------------------
+# Discovered link items (parallel arrays)
+# ---------------------------------------------------------------------------
+declare -a ITEM_SOURCE=()
+declare -a ITEM_TARGET=()
+declare -a ITEM_LABEL=()
+declare -a ITEM_SELECTED=()
+
+add_item() {
+	local -r source="$1" target="$2" label="$3"
+	ITEM_SOURCE+=("$source")
+	ITEM_TARGET+=("$target")
+	ITEM_LABEL+=("$label")
+	ITEM_SELECTED+=(1) # selected by default; user can deselect
+}
+
 # Function to create relative symlink
 default_link() {
 	local -r source="$1"
@@ -30,49 +46,17 @@ default_link() {
 		return 1
 	fi
 
-	# Get relative path from target to source
+	# Directory must exist before realpath can compute a relative path into it
 	local target_dir
 	target_dir="$(dirname "$target")"
+	mkdir -p "$target_dir"
+
 	local relative_path
 	relative_path="$(realpath --relative-to="$target_dir" "$source")"
-
-	mkdir -p "$(dirname "$target")"
 
 	ln -s "$relative_path" "$target"
 	echo -e "${GREEN}✓${NC}  Created symlink: $target -> $relative_path"
 	return 0
-}
-
-prompt_link() {
-	local -r source="$1"
-	local -r target="$2"
-
-	local response overwrite
-	read -p "Link $target ($target -> $source)? [y/N]: " -r response
-	case "$response" in
-		[yY][eE][sS]|[yY])
-			if default_link "$source" "$target"; then
-				return 0
-			else
-				read -p "  Overwrite? [y/N]: " -r overwrite
-				case "$overwrite" in
-					[yY][eE][sS]|[yY])
-						rm -rf "$target"
-						default_link "$source" "$target"
-						return 0
-						;;
-					*)
-						echo -e "${YELLOW}⚠${NC}  Skipped $target"
-						return 0
-						;;
-				esac
-			fi
-			;;
-		*)
-			echo -e "${YELLOW}⚠${NC}  Skipped $target"
-			return 0
-			;;
-	esac
 }
 
 extract_readme_section() {
@@ -119,7 +103,7 @@ copy_readme_section() {
 	# check if the specific section already exists in ./bs/README.md
 	local -r relative_file="$(realpath "$file" --relative-to="$SCRIPT_DIR")"
 	local -r relative_file_re="${relative_file//./\\.}"
-	local -r section_pattern="^#+[[:space:]]+${relative_file_re}[[:space:]]*\$"
+	local -r section_pattern="^#+[[:space:]]+${relative_file_re}.*\$"
 
 	if grep -qE "$section_pattern" "./$readme" 2>/dev/null; then
 		return 0
@@ -146,73 +130,288 @@ copy_readme_section() {
 	return 0
 }
 
-prompt_dir(){
+# ---------------------------------------------------------------------------
+# Discovery: walk bs/ and collect every candidate link (source -> target)
+# without touching the filesystem or prompting.
+# ---------------------------------------------------------------------------
+discover_scripts() {
 	local -r dir="$1"
 	local -r path="$2"
 
-	local response
-	read -p "'$dir' directory not found in '$path'. Create it? [y/N]: " -r response
-	case "$response" in
-		[yY][eE][sS]|[yY])
-			mkdir -p "$path/$dir"
-			echo -e "${GREEN}✓${NC}  Created directory: $path/$dir"
-			;;
-		*)
-			echo -e "${YELLOW}⚠${NC}  Skipped $path/$dir"
-			return 1
-			;;
-	esac
-}
-
-process_scripts(){
-	local -r dir="$1"
-	local -r path="$2"
-
-	if [[ ! -d "$path/$dir" ]]; then
-		if ! prompt_dir "$dir" "$path"; then
-			return 0
-		fi
-	fi
-
-	local -r prev_shopt="$(shopt -p dotglob nullglob)"
+	local prev_shopt
+	prev_shopt="$(shopt -p dotglob nullglob)"
 	shopt -s dotglob nullglob
 
 	for file in "$SCRIPT_DIR/$dir"/*; do
 		if [[ "$SCRIPT_DIR/bs/README.md" == "$file" || "$SCRIPT_DIR/bs/lint.sh" == "$file" ]]; then
 			continue
 		fi
+
 		if [[ -f "$file" ]]; then
-			prompt_link "$file" "$path/$dir/$(basename "$file")"
-			copy_readme_section "$file"
+			local target="$path/$dir/$(basename "$file")"
+			add_item "$file" "$target" "$dir/$(basename "$file")"
 			continue
 		fi
 
 		if [[ -d "$file" ]]; then
-			process_scripts "$dir/$(basename "$file")" "$path"
+			discover_scripts "$dir/$(basename "$file")" "$path"
 		fi
 	done
 
 	eval "$prev_shopt"
 }
 
-echo "============================================="
-echo "  @indigomultimediateam/indigo-bs Installer  "
-echo "============================================="
-echo ""
-echo "This script creates relative symlinks for shared configurations."
-echo "Relative symlinks work cross-platform and avoid git false positives."
-echo ""
+# ---------------------------------------------------------------------------
+# Interactive selection UI
+# ---------------------------------------------------------------------------
 
-# Link .editorconfig
-prompt_link "$SCRIPT_DIR/.editorconfig" "./.editorconfig"
-echo ""
+print_list() {
+	local i note
+	for i in "${!ITEM_LABEL[@]}"; do
+		local mark=" "
+		(( ITEM_SELECTED[i] )) && mark="x"
+		note=""
+		if [[ -e "${ITEM_TARGET[i]}" ]]; then
+			note="${YELLOW}⚠${NC}$note"
+		fi
+		if [[ ! -d "$(dirname "${ITEM_TARGET[i]}")" ]]; then
+			note="∄$note"
+		fi
+		if [[ -n "$note" ]]; then
+			note="  $note"
+		fi
+		printf "  %2d. [%s] %s%s\n" \
+			"$((i + 1))" "$mark" "${ITEM_LABEL[i]} -> ${ITEM_TARGET[i]}" "$(echo -e "$note")"
+	done
+}
 
-process_scripts bs .
-echo ""
+toggle_selection_range() {
+	local start="$1"
+	local end="$2"
+	if (( start > end )); then
+		local tmp=$start
+		start=$end
+		end=$tmp
+	fi
 
-echo "============================================"
-echo "	Installation complete!"
-echo "============================================"
-echo ""
-echo "You can now use the shared configs and build scripts."
-echo "Run 'bs/npm/hooks/prepare' to set up git hooks."
+	for (( n = start; n <= end; n++ )); do
+		if (( n >= 1 && n <= ${#ITEM_LABEL[@]} )); then
+			ITEM_SELECTED[n - 1]=$(( 1 - ITEM_SELECTED[n - 1] ))
+		fi
+	done
+}
+toggle_selection() {
+	local -r input="$1"
+	local token start end n
+
+	for token in $input; do
+		if [[ "$token" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+			toggle_selection_range "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+		elif  [[ "$token" =~ ^-([0-9]+)$ ]]; then
+			toggle_selection_range 1 "${BASH_REMATCH[1]}"
+		elif [[ "$token" =~ ^([0-9]+)-$ ]]; then
+			toggle_selection_range "${BASH_REMATCH[1]}" "${#ITEM_LABEL[@]}"
+		elif [[ "$token" =~ ^[0-9]+$ ]]; then
+			if (( token >= 1 && token <= ${#ITEM_LABEL[@]} )); then
+				ITEM_SELECTED[token - 1]=$(( 1 - ITEM_SELECTED[token - 1] ))
+			fi
+		else
+			echo -e "${RED}✗${NC}  Ignoring invalid selection: $token" >&2
+		fi
+	done
+}
+
+selection_step() {
+	local sel_input
+	while true; do
+		echo ""
+		echo "Select what to link:"
+		print_list
+		echo ""
+		echo "  Toggle: numbers/ranges, e.g. '1 3 5' or '1-5'/'-5'/'5-'"
+		echo -e "  ${YELLOW}⚠ will overwrite existing file${NC}"
+		echo -e "  ∄ directory will be created"
+		echo "  Leave blank and press enter when done"
+		read -rp "> " sel_input
+
+		[[ -z "$sel_input" ]] && break
+		toggle_selection "$sel_input"
+	done
+}
+
+# Returns 0 to proceed with install, 1 to go back to selection
+confirmation_step() {
+	echo ""
+	echo "Confirm the following actions:"
+	print_list
+
+	local any_selected=0 i
+	for i in "${!ITEM_SELECTED[@]}"; do
+		if (( ITEM_SELECTED[i] )); then
+			any_selected=1
+			break
+		fi
+	done
+	if (( ! any_selected )); then
+		echo ""
+		echo -e "${YELLOW}⚠${NC}  Nothing selected — nothing will happen."
+	fi
+
+	echo ""
+	local confirm
+	read -rp "Proceed with installation? [y/N/b=back]: " confirm
+	case "$confirm" in
+		[yY][eE][sS]|[yY])
+			return 0
+			;;
+		[bB]|back|BACK)
+			return 1
+			;;
+		*)
+			echo "Aborted."
+			exit 0
+			;;
+	esac
+}
+
+# ---------------------------------------------------------------------------
+# Usage
+# ---------------------------------------------------------------------------
+
+print_usage() {
+	cat <<EOF
+@indigomultimediateam/indigo-bs installer
+
+Creates relative symlinks for shared configs and build scripts (.editorconfig
+and everything under bs/) into the current project. Relative symlinks work
+cross-platform and avoid git false positives.
+
+Usage:
+  $(basename "${BASH_SOURCE[0]}") [options]
+
+Options:
+  -h, --help          Show this help message and exit
+  -l, --list          List discovered items with their numbers and exit
+  -s, --select SPEC   Choose items non-interactively, skipping the selection
+                      screen. SPEC uses the same syntax as the interactive
+                      prompt (see below), e.g. "1-5 7" or "all 3".
+  -y, --yes           Skip the confirmation screen and proceed automatically.
+                      Combine with --select for a fully non-interactive run.
+
+Without --select, you'll be shown a numbered list of items to link and asked
+which ones to include:
+  Toggle:     numbers/ranges, e.g. '1 3 5' or '1-5'
+  Leave blank and press enter when done
+
+Without --yes, you'll then see a confirmation screen listing exactly what
+will be linked (with a warning for anything that would overwrite an existing
+file). Answer 'b' there to go back and change your selection.
+
+Examples:
+  $(basename "${BASH_SOURCE[0]}") --list
+  $(basename "${BASH_SOURCE[0]}") --select "1-5 7" --yes
+EOF
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+main() {
+	local select_arg="" auto_yes=0 list_only=0
+
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			-h|--help)
+				print_usage
+				exit 0
+				;;
+			-l|--list)
+				list_only=1
+				;;
+			-s|--select)
+				shift
+				if [[ $# -eq 0 ]]; then
+					echo -e "${RED}✗${NC}  --select requires an argument" >&2
+					exit 1
+				fi
+				select_arg="$1"
+				;;
+			--select=*)
+				select_arg="${1#*=}"
+				;;
+			-y|--yes)
+				auto_yes=1
+				;;
+			*)
+				echo -e "${RED}✗${NC}  Unknown option: $1" >&2
+				print_usage
+				exit 1
+				;;
+		esac
+		shift
+	done
+
+	echo "============================================="
+	echo "  @indigomultimediateam/indigo-bs Installer  "
+	echo "============================================="
+	echo ""
+	echo "This script creates relative symlinks for shared configurations."
+	echo "Relative symlinks work cross-platform and avoid git false positives."
+	echo "Run with --help for more details."
+
+	add_item "$SCRIPT_DIR/.editorconfig" "./.editorconfig" ".editorconfig"
+	discover_scripts bs .
+
+	if (( list_only )); then
+		echo ""
+		print_list
+		exit 0
+	fi
+
+	if [[ -n "$select_arg" ]]; then
+		local i
+		for i in "${!ITEM_LABEL[@]}"; do ITEM_SELECTED[i]=0; done
+		toggle_selection "$select_arg"
+	else
+		selection_step
+	fi
+
+	if (( auto_yes )); then
+		echo ""
+		echo "Proceeding non-interactively with:"
+		print_list
+	else
+		while ! confirmation_step; do
+			selection_step
+		done
+	fi
+
+	echo ""
+	local i source target
+	for i in "${!ITEM_LABEL[@]}"; do
+		if (( ITEM_SELECTED[i] )); then
+			source="${ITEM_SOURCE[i]}"
+			target="${ITEM_TARGET[i]}"
+
+			if [[ -e "$target" ]]; then
+				rm -rf "$target"
+			fi
+			default_link "$source" "$target"
+
+			if [[ "$source" == "$SCRIPT_DIR/bs/"* ]]; then
+				copy_readme_section "$source"
+			fi
+		fi
+	done
+
+	echo ""
+	echo "============================================"
+	echo "	Installation complete!"
+	echo "============================================"
+	echo ""
+	echo "You can now use the shared configs and build scripts."
+	echo "Run 'bs/npm/hooks/prepare' to set up git hooks."
+}
+
+main "$@"

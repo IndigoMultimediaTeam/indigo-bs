@@ -5,37 +5,14 @@ This project uses [jaandrle/bs: The simplest possible build system using executa
 
 ### Development
 
-#### bs/dev/lint.js
+### bs/dev/lint.js [--fix|--verbose]
 Runs Biome **linting** + TypeScript **type checking**.
 
-**Options**:
-- `--fix`: Apply automatic fixes
-- `--verbose`: Show detailed output
-
-#### bs/dev/biome.js
+### bs/dev/biome.js [Linting|Formatting|All] [--fix|--verbose]
 Formats/Lints the codebase using [Biome](https://biomejs.dev/guides/getting-started/).
 
-**Usage**:
-```bash
-bs/dev/biome.js [method]
-```
-
-**Methods**:
-- `Formatting` (default) - Format code
-- `Linting` - Lint code
-- `All` - Run both formatting and linting
-
-**Options**:
-- `--fix`: Apply automatic fixes
-- `--verbose`: Show detailed output
-
-#### bs/dev/codebase-analyzer
+#### bs/dev/codebase-analyzer [fallow-options]
 Analyzes the codebase using [fallow](https://github.com/jaandrle/fallow).
-
-**Usage**:
-```bash
-bs/dev/codebase-analyzer [fallow-options]
-```
 
 ### Git Hooks
 
@@ -47,31 +24,12 @@ Automatically runs `npm ci` when `package-lock.json` changes after a git merge.
 #### bs/npm/hooks/prepare
 NPM life-cycle script that registers git hooks path.
 
-#### bs/npm/install-audit
+#### bs/npm/install-audit [package]]
 Audits npm package installations.
 
-**Usage**:
-```bash
-bs/npm/install-audit [package]
-```
 
 #### bs/npm/lint
 Validates `package.json` lockfile consistency using [lockfile-lint](https://github.com/jaandrle/lockfile-lint).
 
-**Usage**:
-```bash
-bs/npm/lint
-```
-
 #### bs/npm/update
 Interactively updates dependencies using [npm-check-updates](https://github.com/raineorshine/npm-check-updates).
-
-**Usage**:
-```bash
-bs/npm/update
-```
-
-**Options**:
-- Updates are grouped by type
-- 7-day cooldown period between update checks
-

@@ -41,31 +41,42 @@ Run the install script to create relative symlinks for both configs and build sc
 ./node_modules/@indigomultimediateam/indigo-bs/install.sh
 ```
 
-The script links `.editorconfig` and then walks the `bs/` directory, prompting
-you individually for **each file** it finds (not the directory as a whole).
-This means you can accept a symlink for most scripts while keeping a local
-override for one you've customized — declining a file just skips it and
-leaves the rest of the install untouched.
+The script discovers all files under `bs/` and `.editorconfig`, then presents
+you with an interactive selection interface. You can accept symlinks for most
+scripts while keeping local overrides for customized ones — declining a file
+simply skips it, leaving the rest of the install untouched.
 
-The script is interactive and expects a terminal; it isn't currently safe to
-run unattended in CI or as an npm `postinstall` hook.
+**Interactive features:**
+- Toggle individual items or ranges (e.g., `1 3 5` or `1-5`)
+- Existing files are marked with ⚠ (will be overwritten if selected)
+- Missing directories are marked with ∄ (will be created)
+- Type `b` at confirmation to go back and change your selection
 
 **Non-interactive install:** for CI or scripted bootstraps on a clean checkout,
-pipe `yes` into the script to auto-confirm every prompt:
+use the `--select` and `--yes` flags:
 ```bash
-yes | ./node_modules/@indigomultimediateam/indigo-bs/install.sh
+# Select specific items by number
+./node_modules/@indigomultimediateam/indigo-bs/install.sh --select "1-5 7" --yes
+
+# Select all items
+./node_modules/@indigomultimediateam/indigo-bs/install.sh --select all --yes
 ```
-This also auto-confirms *overwrites*, so only use it on a fresh checkout —
-running it against an existing setup may silently replace files you meant to keep.
+
+You can also list discovered items without installing:
+```bash
+./node_modules/@indigomultimediateam/indigo-bs/install.sh --list
+```
+
+**Note:** The script also automatically maintains a local `bs/README.md` by
+copying relevant sections from the source documentation for each script you link.
 
 **Benefits of relative symlinks:**
 - Cross-platform compatibility (works on Windows, macOS, Linux)
 - No git false positives for file changes
 
-**Re-running the script:** existing symlinks (or files) are reported as
-"already exists" and left alone unless you explicitly confirm an overwrite,
-so re-running after an update is safe — it won't clobber local
-customizations without asking first.
+**Re-running the script:** existing symlinks (or files) are reported and left
+alone unless explicitly selected for overwrite, so re-running after an update
+is safe — it won't clobber local customizations without asking first.
 
 #### Option 2: Manual Symlinks
 
@@ -115,14 +126,14 @@ See [bs/README.md](./bs/README.md) for complete documentation of all available b
 
 | Script | Purpose |
 |--------|---------|
-| `bs/dev/lint.js` | Run Biome linting + TypeScript type checking |
-| `bs/dev/biome.js` | Format/lint codebase using Biome |
-| `bs/dev/codebase-analyzer` | Analyze codebase using fallow |
-| `bs/npm/hooks/prepare` | Register git hooks path |
-| `bs/npm/install-audit` | Audit npm package installations |
-| `bs/npm/lint` | Validate lockfile consistency |
-| `bs/npm/update` | Interactively update dependencies |
-| `bs/git/hooks/post-merge` | Auto-run `npm ci` on package-lock.json changes |
+| `bs/dev/lint.js [--fix|--verbose]` | Run Biome **linting** + TypeScript **type checking** |
+| `bs/dev/biome.js [Linting|Formatting|All] [--fix|--verbose]` | Format/lint codebase using [Biome](https://biomejs.dev/guides/getting-started/) |
+| `bs/dev/codebase-analyzer [fallow-options]` | Analyze codebase using [fallow](https://github.com/jaandrle/fallow) |
+| `bs/git/hooks/post-merge` | Automatically runs `npm ci` when `package-lock.json` changes after a git merge |
+| `bs/npm/hooks/prepare` | NPM life-cycle script that registers git hooks path |
+| `bs/npm/install-audit [package]` | Audit npm package installations |
+| `bs/npm/lint` | Validate `package.json` lockfile consistency using [lockfile-lint](https://github.com/jaandrle/lockfile-lint) |
+| `bs/npm/update` | Interactively update dependencies using [npm-check-updates](https://github.com/raineorshine/npm-check-updates) |
 
 ## Dependencies
 
