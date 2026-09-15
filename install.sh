@@ -148,7 +148,8 @@ discover_scripts() {
 		fi
 
 		if [[ -f "$file" ]]; then
-			local target="$path/$dir/$(basename "$file")"
+			local target
+			target="$path/$dir/$(basename "$file")"
 			add_item "$file" "$target" "$dir/$(basename "$file")"
 			continue
 		fi
