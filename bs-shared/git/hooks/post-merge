@@ -1,0 +1,16 @@
+#!/usr/bin/env -S npx nodejsscript
+import { describeFromReadme } from "../../.common.js";
+
+$.api("", true)
+.describe(describeFromReadme())
+.action(function main(){
+	const file= "package-lock.json";
+	const is_diff= s.$().run`git diff --name-only 'HEAD@{1}' HEAD`.toString().includes(file);
+	if(!is_diff) return $.exit(0);
+
+	echo(`📦 ${file} changed.`);
+	echo("Run `npm ci` to bring your dependencies up to date.");
+	s.run`npm ci`;
+	$.exit(0);
+})
+.parse();

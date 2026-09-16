@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 
 # depends on
 declare -r fallow='node_modules/.bin/fallow'

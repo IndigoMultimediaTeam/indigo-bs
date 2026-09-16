@@ -3,10 +3,14 @@ This project uses [jaandrle/bs: The simplest possible build system using executa
 
 ## Available executables
 
-### bs/lint.sh
-Checks for syntax errors in all bash scripts.
+### bs/dev/lint.js [--fix|--verbose]
+Runs Biome **linting** + TypeScript **type checking**.
 
-### Package life-cycle scripts
+### bs/dev/biome.js [Linting|Formatting|All] [--fix|--verbose]
+Formats/Lints the codebase using [Biome](https://biomejs.dev/guides/getting-started/).
+
+### bs/dev/codebase-analyzer [fallow-options]
+Analyzes the codebase using [fallow](https://github.com/jaandrle/fallow).
 
 #### bs/git/hooks/post-merge
 Automatically runs `npm ci` when `package-lock.json` changes after a git merge.

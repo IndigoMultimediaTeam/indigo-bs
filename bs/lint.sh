@@ -28,6 +28,6 @@ for script in $SCRIPTS; do
 	if lint "$script"; then
 		echo -e "$overwrite✓ passed: $script" >&2
 	else
-		echo -e "$overwrite✗ passed: $script"
+		echo -e "$overwrite✗ failed: $script"
 	fi
 done
