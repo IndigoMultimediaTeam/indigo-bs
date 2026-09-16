@@ -66,6 +66,11 @@ extract_readme_section() {
 	local line hashes
 	local -i printing=0 level=0 cur_level=0
 
+	# `level` captures the heading depth of the matched (section start) line.
+	# We print the matched line, then keep printing every subsequent line
+	# until we reach another heading whose level is equal or higher
+	# (i.e. a sibling or parent — `cur_level <= level`). Child headings
+	# (deeper nesting, larger `cur_level`) are kept as part of the section.
 	while IFS= read -r line || [[ -n "$line" ]]; do
 		if [[ "$line" =~ $pattern ]]; then
 			hashes="${line%%[^#]*}"
@@ -89,27 +94,27 @@ extract_readme_section() {
 }
 
 # create ./bs/README.md if needed
-# copy head of $SCRIPT_DIR/bs/README.md to ./bs/README.md if needed
-# copy `#* $file` section from $SCRIPT_DIR/bs/README.md to ./bs/README.md if needed
+# copy head of $SCRIPT_DIR/bs-shared/README.md to ./bs/README.md if needed
+# copy `#* $file` section from $SCRIPT_DIR/bs-shared/README.md to ./bs/README.md if needed
 copy_readme_section() {
 	local -r file="$1"
 	local -r readme='bs/README.md'
 	if [[ ! -e "./$readme" ]]; then
 		mkdir -p ./bs
-		head "$SCRIPT_DIR/$readme" -n 5 > ./bs/README.md
+		head "$SCRIPT_DIR/bs-shared/README.md" -n 5 > ./"$readme"
 		echo -e "${GREEN}✓${NC}  Created ./$readme from template"
 	fi
 
 	# check if the specific section already exists in ./bs/README.md
-	local -r relative_file="$(realpath "$file" --relative-to="$SCRIPT_DIR")"
+	local -r relative_file="$(realpath --relative-to="$SCRIPT_DIR" "$file")"
 	local -r relative_file_re="${relative_file//./\\.}"
-	local -r section_pattern="^#+[[:space:]]+${relative_file_re}.*\$"
+	local -r section_pattern="^#+[[:space:]]+${relative_file_re/bs-shared\//bs\/}.*\$"
 
 	if grep -qE "$section_pattern" "./$readme" 2>/dev/null; then
 		return 0
 	fi
 
-	local -r source_readme="$SCRIPT_DIR/$readme"
+	local -r source_readme="$SCRIPT_DIR/bs-shared/README.md"
 	if [[ ! -e "$source_readme" ]]; then
 		return 0
 	fi
@@ -131,31 +136,32 @@ copy_readme_section() {
 }
 
 # ---------------------------------------------------------------------------
-# Discovery: walk bs/ and collect every candidate link (source -> target)
+# Discovery: walk bs-shared/ and collect every candidate link (source -> target)
 # without touching the filesystem or prompting.
 # ---------------------------------------------------------------------------
 discover_scripts() {
 	local -r dir="$1"
 	local -r path="$2"
+	local -r dir_target="${3:-$dir}"
 
 	local prev_shopt
 	prev_shopt="$(shopt -p dotglob nullglob)"
 	shopt -s dotglob nullglob
 
 	for file in "$SCRIPT_DIR/$dir"/*; do
-		if [[ "$SCRIPT_DIR/bs/README.md" == "$file" || "$SCRIPT_DIR/bs/lint.sh" == "$file" ]]; then
+		if [[ "$SCRIPT_DIR/bs-shared/README.md" == "$file" ]]; then
 			continue
 		fi
 
 		if [[ -f "$file" ]]; then
 			local target
-			target="$path/$dir/$(basename "$file")"
+			target="$path/$dir_target/$(basename "$file")"
 			add_item "$file" "$target" "$dir/$(basename "$file")"
 			continue
 		fi
 
 		if [[ -d "$file" ]]; then
-			discover_scripts "$dir/$(basename "$file")" "$path"
+			discover_scripts "$dir/$(basename "$file")" "$path" "$dir_target/$(basename "$file")"
 		fi
 	done
 
@@ -284,7 +290,7 @@ print_usage() {
 @indigomultimediateam/indigo-bs installer
 
 Creates relative symlinks for shared configs and build scripts (.editorconfig
-and everything under bs/) into the current project. Relative symlinks work
+and everything under bs-shared/) into the current project. Relative symlinks work
 cross-platform and avoid git false positives.
 
 Usage:
@@ -362,7 +368,7 @@ main() {
 	echo "Run with --help for more details."
 
 	add_item "$SCRIPT_DIR/.editorconfig" "./.editorconfig" ".editorconfig"
-	discover_scripts bs .
+	discover_scripts bs-shared . bs
 
 	if (( list_only )); then
 		echo ""
@@ -395,12 +401,19 @@ main() {
 			source="${ITEM_SOURCE[i]}"
 			target="${ITEM_TARGET[i]}"
 
-			if [[ -e "$target" ]]; then
-				rm -rf "$target"
+			# Guard against an empty target (defensive) and refuse to delete
+			# anything that isn't a file or symlink, so a stray directory or
+			# unexpected entry can't be wiped by the rm below.
+			[[ -n "$target" ]] || { echo -e "${RED}✗${NC}  Empty target, skipping" >&2; continue; }
+			if [[ -L "$target" || -f "$target" ]]; then
+				rm -f "$target"
+			elif [[ -e "$target" ]]; then
+				echo -e "${YELLOW}⚠${NC}  Refusing to overwrite non-file: $target" >&2
+				continue
 			fi
 			default_link "$source" "$target"
 
-			if [[ "$source" == "$SCRIPT_DIR/bs/"* ]]; then
+			if [[ "$source" == "$SCRIPT_DIR/bs-shared/"* ]]; then
 				copy_readme_section "$source"
 			fi
 		fi
@@ -412,7 +425,18 @@ main() {
 	echo "============================================"
 	echo ""
 	echo "You can now use the shared configs and build scripts."
-	echo "Run 'bs/npm/hooks/prepare' to set up git hooks."
+
+	# Only hint about the git hooks setup if the user actually selected it.
+	local prepare_selected=0 i
+	for i in "${!ITEM_LABEL[@]}"; do
+		if (( ITEM_SELECTED[i] )) && [[ "${ITEM_LABEL[i]}" == "npm/hooks/prepare" ]]; then
+			prepare_selected=1
+			break
+		fi
+	done
+	if (( prepare_selected )); then
+		echo "Run 'bs/npm/hooks/prepare' to set up git hooks."
+	fi
 }
 
 main "$@"

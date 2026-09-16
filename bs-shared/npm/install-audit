@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+# depends on
+declare -r npq='./node_modules/.bin/npq'
+
+npm show "$1"
+$npq install "$1" --disable-auto-continue

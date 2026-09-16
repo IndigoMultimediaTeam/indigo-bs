@@ -19,17 +19,20 @@
 		"./tsconfig.react.json": "./tsconfig.react.json"
 	},
 	"files": [
-		"bs",
+		"bs-shared",
 		"install.sh",
 		"biome.json",
 		".editorconfig",
 		"tsconfig.json",
 		"tsconfig.react.json"
 	],
-	"scripts": {},
+	"scripts": {
+		"prepare": "bs/npm/prepare",
+		"lint": "echo '\\033[33mUse `bs` (see `bs/README.md`) instead of `npm run lint`\\033[0m' && bs/lint.sh"
+	},
 	"dependencies": {
 		"@biomejs/biome": "^2.5.12",
-		"fallow": "~3.22",
+		"fallow": "~3.23",
 		"lockfile-lint": "~5.0",
 		"npm-check-updates": "~23.1",
 		"npq": "~3.27"
