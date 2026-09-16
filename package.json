@@ -39,7 +39,7 @@
 	},
 	"peerDependencies": {
 		"nodejsscript": "~1",
-		"typescript": "~7.0"
+		"typescript": ">=4.9.5"
 	},
 	"publishConfig": {
 		"access": "public",
