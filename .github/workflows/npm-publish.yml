@@ -1,0 +1,19 @@
+name: Publish Package to npmjs
+on:
+  workflow_dispatch:
+  release:
+    types: [created]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+        with:
+          node-version: '22.17'
+          registry-url: 'https://npm.pkg.github.com'
+          package-manager-cache: false # Disable automatic npm dependency caching to reduce cache poisoning risk
+      - run: npm ci
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

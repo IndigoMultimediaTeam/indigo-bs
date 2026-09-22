@@ -1,0 +1,28 @@
+name: On PR Review
+on:
+  workflow_dispatch:
+  pull_request_review:
+    branches: [main]
+    types: [submitted]
+
+jobs:
+  main:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0  # Ensure full history is fetched
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22.22
+      - run: npm ci
+        env:
+            NODE_AUTH_TOKEN: ${{ secrets.NPM_GITHUB_TOKEN }}
+      - run: ./bs/dev/biome.js Formatting --fix
+      - name: Commit formatted files
+        uses: stefanzweifel/git-auto-commit-action@28e16e81777b558cc906c8750092100bbb34c5e3 # v7.0.0
+        with:
+          commit_message: ":tv: format code"
+          branch: ${{ github.head_ref }}  # Explicitly set the branch to push to, see issue #30

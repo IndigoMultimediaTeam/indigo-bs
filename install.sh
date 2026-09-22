@@ -192,6 +192,13 @@ print_list() {
 	done
 }
 
+print_list_only() {
+	local i
+	for i in "${!ITEM_LABEL[@]}"; do
+		echo "$SCRIPT_DIR/${ITEM_LABEL[i]}"
+	done
+}
+
 toggle_selection_range() {
 	local start="$1"
 	local end="$2"
@@ -286,6 +293,7 @@ confirmation_step() {
 # ---------------------------------------------------------------------------
 
 print_usage() {
+	local -r script="$(basename "${BASH_SOURCE[0]}")"
 	cat <<EOF
 @indigomultimediateam/indigo-bs installer
 
@@ -294,11 +302,11 @@ and everything under bs-shared/) into the current project. Relative symlinks wor
 cross-platform and avoid git false positives.
 
 Usage:
-  $(basename "${BASH_SOURCE[0]}") [options]
+  $script [options]
 
 Options:
   -h, --help          Show this help message and exit
-  -l, --list          List discovered items with their numbers and exit
+  -l, --list          List discovered items with their source paths and exit
   -s, --select SPEC   Choose items non-interactively, skipping the selection
                       screen. SPEC uses the same syntax as the interactive
                       prompt (see below), e.g. "1-5 7" or "all 3".
@@ -315,8 +323,8 @@ will be linked (with a warning for anything that would overwrite an existing
 file). Answer 'b' there to go back and change your selection.
 
 Examples:
-  $(basename "${BASH_SOURCE[0]}") --list
-  $(basename "${BASH_SOURCE[0]}") --select "1-5 7" --yes
+  $script --list
+  $script --select "1-5 7" --yes
 EOF
 }
 
@@ -359,20 +367,22 @@ main() {
 		shift
 	done
 
-	echo "============================================="
-	echo "  @indigomultimediateam/indigo-bs Installer  "
-	echo "============================================="
-	echo ""
-	echo "This script creates relative symlinks for shared configurations."
-	echo "Relative symlinks work cross-platform and avoid git false positives."
-	echo "Run with --help for more details."
+	if (( !list_only )); then
+		echo "============================================="
+		echo "  @indigomultimediateam/indigo-bs Installer  "
+		echo "============================================="
+		echo ""
+		echo "This script creates relative symlinks for shared configurations."
+		echo "Relative symlinks work cross-platform and avoid git false positives."
+		echo "Run with --help for more details."
+	fi
 
 	add_item "$SCRIPT_DIR/.editorconfig" "./.editorconfig" ".editorconfig"
+	discover_scripts .github . .github
 	discover_scripts bs-shared . bs
 
 	if (( list_only )); then
-		echo ""
-		print_list
+		print_list_only
 		exit 0
 	fi
 
