@@ -1,6 +1,6 @@
 {
 	"name": "@indigomultimediateam/indigo-bs",
-	"version": "1.0.1",
+	"version": "1.1.0",
 	"description": "Indigo’s shared bs (build system) utils and configs",
 	"homepage": "https://github.com/IndigoMultimediaTeam/indigo-bs#readme",
 	"bugs": {
