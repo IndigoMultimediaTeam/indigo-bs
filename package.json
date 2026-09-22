@@ -23,6 +23,7 @@
 		"install.sh",
 		"biome.json",
 		".github/workflows",
+		".npmrc",
 		".editorconfig",
 		"tsconfig.json",
 		"tsconfig.react.json"
