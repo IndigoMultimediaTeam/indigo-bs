@@ -31,3 +31,65 @@ for script in $SCRIPTS; do
 		echo -e "$overwrite✗ failed: $script"
 	fi
 done
+
+echo "… linting: exported files" >&2
+declare -a files_wanted=()
+scan_dir(){
+	local -r dir="$1"
+	for file in "$dir"/*; do
+		if [[ -d "$file" ]]; then
+			scan_dir "$file"
+			continue
+		fi
+		files_wanted+=("$file")
+	done
+}
+while read -r candidate; do
+	if [[ 'add_item() {' == "$candidate" ]]; then
+		continue
+	fi
+	read -r _ file _ <<< "$candidate"
+	file=${file#\"}
+	file=${file%\"}
+	file=${file//\$SCRIPT_DIR\//}
+	# shellcheck disable=SC2016
+	if [[ "$file" == '$file' ]]; then
+		continue
+	fi
+	files_wanted+=("$file")
+done < <(grep add_item install.sh)
+while read -r candidate; do
+	if [[ 'discover_scripts() {' == "$candidate" ]]; then
+		continue
+	fi
+	read -r _ dir _ <<< "$candidate"
+	dir=${dir#\"}
+	dir=${dir%\"}
+	# shellcheck disable=SC2016
+	if [[ "$dir" =~ '$dir' ]]; then
+		continue
+	fi
+	scan_dir "$dir"
+done < <(grep discover_scripts install.sh)
+
+declare -a files_exported=()
+while read -r candidate; do
+	read -r _ file _ <<< "$candidate"
+	file=${file#\"}
+	file=${file/\",/}
+	files_exported+=("$file")
+done < <(npm pack --dry-run --json --silent)
+
+declare -a files_missing=()
+for file in "${files_wanted[@]}"; do
+	if [[ ! " ${files_exported[*]} " =~ \ $file\  ]]; then
+		files_missing+=("$file")
+	fi
+done
+
+if [[ ${#files_missing[@]} -gt 0 ]]; then
+	echo -e "$overwrite✗ passed: exported files" >&2
+	printf '  %s\n' "${files_missing[@]}" >&2
+	exit 1
+fi
+echo -e "$overwrite✓ passed: exported files" >&2

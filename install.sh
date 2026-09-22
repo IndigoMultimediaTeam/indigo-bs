@@ -378,7 +378,7 @@ main() {
 	fi
 
 	add_item "$SCRIPT_DIR/.editorconfig" "./.editorconfig" ".editorconfig"
-	add_item "$SCRIPT_DIR/.npmrc" "./.npmrc" ".npmrc"
+	add_item "$SCRIPT_DIR/npmrc" "./.npmrc" ".npmrc"
 	discover_scripts .github . .github
 	discover_scripts bs-shared . bs
 
