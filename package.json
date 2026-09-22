@@ -22,6 +22,7 @@
 		"bs-shared",
 		"install.sh",
 		"biome.json",
+		".github/workflows",
 		".editorconfig",
 		"tsconfig.json",
 		"tsconfig.react.json"
