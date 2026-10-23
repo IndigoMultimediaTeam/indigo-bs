@@ -11,6 +11,9 @@ $.api("", true)
 	echo(`📦 ${file} changed.`);
 	echo("Run `npm ci` to bring your dependencies up to date.");
 	s.run`npm ci`;
+	const original= "../../../.git/hooks/post-merge";
+	if(s.test("-f", original))
+		s.run(original);
 	$.exit(0);
 })
 .parse();
