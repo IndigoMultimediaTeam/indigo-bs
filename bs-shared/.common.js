@@ -1,6 +1,6 @@
 $.env.FORCE_COLOR = 1;
 $.configAssign({ fatal: true });
-export const pathBs = $.pathFromURL(import.meta.url);
+export const pathBs = $.pathFromURL(import.meta.url.replace("node_modules/@indigomultimediateam/indigo-bs/bs-shared", "bs"));
 
 import { relative } from "node:path";
 export function describeFromReadme() {
